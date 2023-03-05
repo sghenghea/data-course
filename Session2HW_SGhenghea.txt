@@ -1,0 +1,54 @@
+create table locations (
+	id int constraint location_pk primary key,
+	location_name varchar(60) not null ,
+	region varchar(60) not null,
+	street_name varchar(60) not null,
+	building_no varchar(10) not null,
+	apartment_no varchar(10),
+	created_on date default current_date,
+	constraint address_uq unique (location_name, street_name, building_no, apartment_no)
+)
+
+--
+create table peoples (
+	id int constraint peoples_pk primary key,
+	first_name varchar(60) not null,
+	last_name varchar(60) not null,
+	date_of_birth date not null,
+	idnp char(13) not null unique,
+	gender varchar(10) not null,
+	phone_no varchar(15),
+	mother_id int,
+	father_id int,
+	date_of_death date,
+	location_id int,
+	created_on date default current_date,
+	constraint idnp_ck check (lenght(idnp) = 13),
+	constraint dob_ck check (date_of_birth > '1900-01-01'),
+	constraint dates_ck check (date_of_death >= date_of_birth),
+	constraint gender_ck check (lower(gender) in ('male','female')),
+	constraint mother_fk foreign key (mother_id) references peoples (id),
+	constraint father_fk foreign key (father_id) references peoples (id),
+	constraint locations_fk foreign key (location_id) references locations (id)
+)
+
+-- insert data
+DO $$
+
+begin
+
+	insert into locations 
+	values (1, 'Chisinau', 'Chisinau', 'str. Studentilor', '2a', '22', current_date), 
+		(2, 'Milesti', 'Chisinau', 'str. Studentilor', '2a', '42', current_date),
+		(3, 'Vatra', 'Chisinau', 'str. Vadul lui Voda', '65', '542', current_date),
+		(4, 'Stauceni', 'Chisinau', 'str. Miorita', '1', null, current_date);
+		
+	insert into peoples (id, first_name, last_name, date_of_birth, idnp, gender, phone_no, created_on)
+	values (1, 'First1', 'Last1','1989-02-03' , '8765432798123', 'male', '022345678',current_date), 
+		(2, 'First2', 'Last2','1990-04-03' , '9065432798123', 'female', '022345678',current_date); 
+		
+	insert into peoples (id, first_name, last_name, date_of_birth, idnp, gender, mother_id, father_id, created_on)
+	values (3, 'First3', 'Last3','2020-02-03' , '8765432008123', 'male', 2, 1, current_date), 
+		(4, 'First4', 'Last4','2017-04-09' , '9065432798100', 'female', 2, 1, current_date);		
+
+end $$;

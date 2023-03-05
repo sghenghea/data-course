@@ -1,0 +1,50 @@
+create table peoples_audit_log (
+	id bigint not null,
+	old_row_data jsonb,
+	new_row_data jsonb,
+	dml_type varchar(20) not null,
+	dml_timestamp timestamp not null,
+	constraint audit_log_pk primary key (id, dml_type, dml_timestamp)
+)
+
+
+
+--
+create function trigger_people() 
+returns trigger as $$
+begin
+	case when tg_op in ('UPDATE')
+			then 	insert into peoples_audit_log 
+					values (NEW.id, jsonb_build_object(OLD.*), jsonb_build_object(NEW.*), 'UPDATE', current_timestamp);
+		when tg_op in ('INSERT')
+			then 	insert into peoples_audit_log(id, new_row_data, dml_type, dml_timestamp)
+					values (NEW.id, jsonb_build_object(NEW.*), 'INSERT', current_timestamp);
+	end case;
+
+	return NEW;
+end; 
+$$ language plpgsql
+
+
+create trigger peoples_trigger
+	after insert or	update	
+	on peoples
+	for each row
+	execute function trigger_people();
+	
+
+--
+create function trigger_people_delete() 
+returns trigger as $$
+begin
+	raise exception 'Delete operation is not permitted', now();
+end;
+$$ language plpgsql;
+
+
+create trigger peoples_trigger_delete
+	before delete	
+	on peoples
+	for each statement
+	execute function trigger_people_delete();
+	
