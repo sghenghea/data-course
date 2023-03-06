@@ -10,18 +10,18 @@ create table peoples_audit_log (
 
 
 --
-create function trigger_people() 
+create or replace function trigger_people() 
 returns trigger as $$
 begin
-	case when tg_op in ('UPDATE')
-			then 	insert into peoples_audit_log 
-					values (NEW.id, jsonb_build_object(OLD.*), jsonb_build_object(NEW.*), 'UPDATE', current_timestamp);
-		when tg_op in ('INSERT')
-			then 	insert into peoples_audit_log(id, new_row_data, dml_type, dml_timestamp)
-					values (NEW.id, jsonb_build_object(NEW.*), 'INSERT', current_timestamp);
-	end case;
+	if (tg_op = 'UPDATE') then 	
+		insert into peoples_audit_log 
+			values (NEW.id, to_jsonb(OLD.*), to_jsonb(NEW.*), tg_op::varchar, current_timestamp);
+	elsif (tg_op = 'INSERT') then 	
+		insert into peoples_audit_log(id, new_row_data, dml_type, dml_timestamp)
+			values (NEW.id, to_jsonb(NEW.*), tg_op::varchar, current_timestamp);
+	end if;
 
-	return NEW;
+	return null;
 end; 
 $$ language plpgsql
 
@@ -31,13 +31,20 @@ create trigger peoples_trigger
 	on peoples
 	for each row
 	execute function trigger_people();
-	
+
+
+insert into peoples (id, first_name, last_name, date_of_birth, idnp, gender, phone_no, created_on)
+values (5, 'First5', 'Last5','1989-02-03' , '8765432777123', 'male', '022345678',current_date); 
+
+update peoples set first_name = 'First01' where first_name = 'First1';
+
+select * from peoples_audit_log ;
 
 --
 create function trigger_people_delete() 
 returns trigger as $$
 begin
-	raise exception 'Delete operation is not permitted', now();
+	raise exception 'Delete operation is not permitted';
 end;
 $$ language plpgsql;
 
@@ -47,4 +54,5 @@ create trigger peoples_trigger_delete
 	on peoples
 	for each statement
 	execute function trigger_people_delete();
-	
+
+delete from peoples where id = 1;
